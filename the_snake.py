@@ -60,7 +60,7 @@ class GameObject:
 class Apple(GameObject):
     """Яблочный класс"""
 
-    def __init__(self, color):
+    def __init__(self, color=None):
         """Создание объекта яблока"""
         super().__init__()
         self.position = (randrange(0, SCREEN_WIDTH, GRID_SIZE),
@@ -94,12 +94,16 @@ class Snake(GameObject):
     next_direction = None
     last_position = None
 
-    def __init__(self, color):
+    def __init__(self, color=None):
         """Инициализация объекта змея"""
         super().__init__()
         self.body_color = color
         self.positions = [(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)]
         # Не понимаю как убрать присваивание цвета из данного конструктора
+
+    def reset(self, color=None):
+        """Сброс значений объекта, если куснул хвост"""
+        self.__init__(color)
 
     def get_head_position(self):
         """Поиск головы змея"""
@@ -201,8 +205,8 @@ def main():
 
             apple.position = apple.randomize_position(snake.positions)
 
-        elif snake.positions[0] == snake.get_head_position:
-            snake.__init__(SNAKE_COLOR)
+        elif snake.get_head_position() in snake.positions[1:]:
+            snake.reset(SNAKE_COLOR)
             sleep(2)
             screen.fill(BOARD_BACKGROUND_COLOR)
         apple.draw()
