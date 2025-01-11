@@ -45,10 +45,10 @@ clock = pg.time.Clock()
 class GameObject:
     """Родительский класс игры"""
 
-    def __init__(self) -> None:
+    def __init__(self, color=None) -> None:
         """Метод инициализации объекта"""
         self.position = None
-        self.body_color = None
+        self.body_color = color
 
     def draw(self):
         """метод заглушка для отрисовки"""
@@ -60,12 +60,10 @@ class GameObject:
 class Apple(GameObject):
     """Яблочный класс"""
 
-    def __init__(self, color=None):
+    def __init__(self, color=None, filling_cells=[]):
         """Создание объекта яблока"""
-        super().__init__()
-        self.position = (randrange(0, SCREEN_WIDTH, GRID_SIZE),
-                         randrange(0, SCREEN_HEIGHT, GRID_SIZE))
-        self.body_color = color
+        super().__init__(color)
+        self.position = self.randomize_position(filling_cells)
 
     def draw(self):
         """Отрисовка яблока"""
@@ -73,37 +71,33 @@ class Apple(GameObject):
         pg.draw.rect(screen, self.body_color, rect)
         pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
-    def randomize_position(self, filling_cells):
+    def randomize_position(self, filling_cells=None):
         """Рандомная позиция яблока"""
-        retry = True
-        while retry:
+        while True:
             random_position = (randrange(0, SCREEN_WIDTH, GRID_SIZE),
                                randrange(0, SCREEN_HEIGHT, GRID_SIZE))
+
             if random_position not in filling_cells:
-                retry = False
-        return random_position
+                return random_position
 
 
 class Snake(GameObject):
     """Класс змеи"""
 
-    length = 1
-    positions = [(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)]
-    direction = RIGHT
-    growing = False
-    next_direction = None
-    last_position = None
-
     def __init__(self, color=None):
         """Инициализация объекта змея"""
-        super().__init__()
-        self.body_color = color
-        self.positions = [(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)]
-        # Не понимаю как убрать присваивание цвета из данного конструктора
+        super().__init__(color)
+        self.reset()
 
-    def reset(self, color=None):
+    def reset(self):
         """Сброс значений объекта, если куснул хвост"""
-        self.__init__(color)
+        self.positions = [(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)]
+        self.length = 1
+        self.positions = [(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)]
+        self.direction = RIGHT
+        self.growing = False
+        self.next_direction = None
+        self.last_position = None
 
     def get_head_position(self):
         """Поиск головы змея"""
@@ -120,28 +114,13 @@ class Snake(GameObject):
         """Движение змеи"""
         head_x, head_y = self.get_head_position()
         x, y = self.direction
-        self.positions.insert(0, (head_x + x * GRID_SIZE,
-                                  head_y + y * GRID_SIZE))
+        self.positions.insert(0, ((head_x + (x * GRID_SIZE)) % SCREEN_WIDTH,
+                                  (head_y + (y * GRID_SIZE)) % SCREEN_HEIGHT))
         if not self.growing:
             self.last_position = self.positions[len(self.positions) - 1]
             self.positions.pop(len(self.positions) - 1)
         else:
             self.growing = False
-
-    def window(self):
-        """Выход за границу экрана"""
-        head_x, head_y = self.get_head_position()
-        if head_x == SCREEN_WIDTH:
-            self.positions[0] = (0, head_y)
-        elif head_x < 0:
-            self.positions[0] = (SCREEN_WIDTH, head_y)
-        elif head_y == SCREEN_HEIGHT:
-            self.positions[0] = (head_x, 0)
-        elif head_y < 0:
-            self.positions[0] = (head_x, SCREEN_HEIGHT)
-        # Не понимаю как применить указанную в ревью формулу
-        # coord = head_coord + (direction_coord * GRID_SIZE) %
-        # SCREEN_HEIGHT/WIDTH
 
     def draw(self):
         """Рисуем змею"""
@@ -184,19 +163,13 @@ def main():
     # Инициализация PyGame:
     pg.init()
     # Тут нужно создать экземпляры классов.
-    apple = Apple(APPLE_COLOR)
     snake = Snake(SNAKE_COLOR)
+    apple = Apple(APPLE_COLOR, snake.positions)
 
     while True:
         clock.tick(SPEED)
         handle_keys(snake)
         snake.update_direction()
-
-        apple.draw()
-        snake.draw()
-        pg.display.update()
-        snake.move()
-        snake.window()
 
     # Тут опишите основную логику игры.
         if snake.get_head_position() == apple.position:
@@ -206,11 +179,12 @@ def main():
             apple.position = apple.randomize_position(snake.positions)
 
         elif snake.get_head_position() in snake.positions[1:]:
-            snake.reset(SNAKE_COLOR)
+            snake.reset()
             sleep(2)
             screen.fill(BOARD_BACKGROUND_COLOR)
         apple.draw()
         snake.draw()
+        snake.move()
         pg.display.update()
 
 
